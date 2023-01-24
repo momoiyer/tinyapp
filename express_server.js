@@ -14,6 +14,11 @@ const urlDatabase = {
 //It will then add the data to the req(request) object under the key body
 app.use(express.urlencoded({ extended: true }));
 
+app.get("/u/:id", (req, res) => {
+  const longURL = `/urls/${req.params.id}`;
+  res.redirect(longURL);
+});
+
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
@@ -21,7 +26,10 @@ app.get("/urls", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
-  const longURL = req.body.longURL;
+  let longURL = req.body.longURL;
+  if (!longURL.startsWith("http")) {
+    longURL = 'https://' + longURL;
+  }
   urlDatabase[shortURL] = longURL;
   res.redirect(`/urls/${shortURL}`);
 });
@@ -33,6 +41,9 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   const longURL = urlDatabase[id];
+  if (!longURL) {
+    return res.redirect("/urls");
+  }
   const templateVars = { longURL, id };
   res.render("urls_show", templateVars);
 });
