@@ -10,9 +10,22 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+//The body-parser library will convert the request body from a Buffer into string that we can read
+//It will then add the data to the req(request) object under the key body
+app.use(express.urlencoded({ extended: true }));
+
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase };
   res.render("urls_index", templateVars);
+});
+
+app.post("/urls", (req, res) => {
+  console.log(req.body);
+  res.send("Ok");
+});
+
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
 });
 
 app.get("/urls/:id", (req, res) => {
@@ -22,6 +35,13 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`);
 });
+
+function generateRandomString() {
+  const randomString = Math.random().toString(36);
+  return randomString.slice(randomString.length - 6);
+}
