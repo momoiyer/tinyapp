@@ -1,3 +1,4 @@
+const cookieParser = require("cookie-parser");
 const express = require("express");
 const app = express();
 const PORT = 8080;
@@ -10,17 +11,29 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+
+//--------------//
+//MIDDLEWARE CALLS
+
 //The body-parser library will convert the request body from a Buffer into string that we can read
 //It will then add the data to the req(request) object under the key body
 app.use(express.urlencoded({ extended: true }));
 
+app.use(cookieParser());
+
+
+//--------------//
+//HTTP GET METHODS
 app.get("/u/:id", (req, res) => {
   const longURL = `/urls/${req.params.id}`;
   res.redirect(longURL);
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = {
+    username: req.cookies["username"],
+    urls: urlDatabase
+  };
   res.render("urls_index", templateVars);
 });
 
@@ -32,7 +45,10 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = {
+    username: req.cookies["username"]
+  };
+  res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
@@ -41,8 +57,21 @@ app.get("/urls/:id", (req, res) => {
   if (!longURL) {
     return res.redirect("/urls");
   }
-  const templateVars = { longURL, id };
+  const templateVars = {
+    username: req.cookies["username"],
+    longURL,
+    id
+  };
   res.render("urls_show", templateVars);
+});
+
+
+//--------------//
+//HTTP POST METHODS
+app.post("/login", (req, res) => {
+  const username = req.body.username;
+  res.cookie('username', username);
+  res.redirect('/urls');
 });
 
 app.post("/urls/:id/delete", (req, res) => {
@@ -53,21 +82,18 @@ app.post("/urls/:id/delete", (req, res) => {
 
 app.post("/urls/:id/update", (req, res) => {
   const id = req.params.id;
-  console.log("body:", req.body);
   const newURL = req.body.newURL;
   urlDatabase[id] = appendHttp(newURL);
   return res.redirect("/urls");
 });
 
-app.post("/login", (req, res) => {
-  const username = req.body.username;
-  res.cookie('username', username);
-  res.redirect('/urls');
-});
-
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`);
 });
+
+
+//--------------//
+//HELPER FUNCTIONS
 
 function generateRandomString() {
   // const randomString = Math.random().toString(36);
@@ -81,7 +107,7 @@ function generateRandomString() {
   return result;
 }
 
-//helper method to append http in url
+//helper function to append http in url
 function appendHttp(url) {
   let result = url;
   if (!url.startsWith("http")) {

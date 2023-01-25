@@ -20,8 +20,13 @@
       <div>
         <form method="POST" action="/login">
           <label for="username">Name: </label>
-          <input type="text" name="username" id="username"/>
-          <button type="submit" class="btn btn-outline-primary">Submit</button>
+          <% if(username){ %>
+               <%= username; %>
+          <% }else{ %>
+                <input type="text" name="username" id="username"/>
+                <button type="submit" class="btn btn-outline-primary">Submit</button>
+            <%}
+          %>
         </form>
       </div>
     </div>
