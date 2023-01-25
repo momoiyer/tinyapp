@@ -6,10 +6,22 @@ const PORT = 8080;
 //--------------//
 //TEMPORARY DATABASE SYSTEM
 
+// const urlDatabase = {
+//   "b2xVn2": "http://www.lighthouselabs.ca",
+//   "9sm5xK": "http://www.google.com"
+// };
+
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
 };
+
 
 const users = {
   userRandomID: {
@@ -46,6 +58,7 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+
   const templateVars = {
     user: users[req.cookies["user_id"]],
     urls: urlDatabase
@@ -66,7 +79,7 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
-  const longURL = urlDatabase[id];
+  const longURL = urlDatabase[id].longURL;
   if (!longURL) {
     return res.status(404).send("Requested URL doesn't exists!");
   }
@@ -76,6 +89,7 @@ app.get("/urls/:id", (req, res) => {
     longURL,
     id
   };
+
   res.render("urls_show", templateVars);
 });
 
@@ -113,8 +127,8 @@ app.post("/urls", (req, res) => {
     return res.status(401).send("Only registered users are allowed to shorten the URL");
   }
   const shortURL = generateRandomString();
-  let longURL = req.body.longURL;
-  urlDatabase[shortURL] = appendHttp(longURL);
+  const longURL = appendHttp(req.body.longURL);
+  urlDatabase[shortURL] = { longURL: longURL, userID: userId };
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -125,9 +139,10 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
+  const userId = req.cookies["user_id"];
   const id = req.params.id;
-  const newURL = req.body.newURL;
-  urlDatabase[id] = appendHttp(newURL);
+  const longURL = appendHttp(req.body.newURL);
+  urlDatabase[id] = { longURL: longURL, userID: userId };
   return res.redirect("/urls");
 });
 
