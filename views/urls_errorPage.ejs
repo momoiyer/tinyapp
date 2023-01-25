@@ -19,31 +19,9 @@
   </head>
   <body>
     <main style="margin: 1em;">
-      <h3>My URLs</h3>
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Short URL ID</th>
-            <th scope="col">Long URL</th>
-            <th scope="col">Edit</th>
-            <th scope="col">Delete</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% for (let id in urls) { %>
-            <tr>
-              <td><%= id %></td>
-              <td><a href="/u/<%= id %>"><%= urls[id] %></a></td>
-              <td><form method="GET" action="/urls/<%= id %>">
-                <button type="submit" class="btn btn-outline-primary">Edit</button>
-              </form></td>
-              <td><form method="POST" action="/urls/<%= id %>/delete">
-                <button type="submit" class="btn btn-outline-danger">Delete</button>
-              </form></td>
-            </tr>
-          <% } %>
-        </tbody>
-      </table>
+      <h3>Error Loading Page</h3>
+      <p>HTTP Error Code : <%= errorCode %></p>
+      <p class="text-danger">Error Message : <%= errorMessage %></p>
     </main>
     <!-- Bootstrap JS -->
     <script

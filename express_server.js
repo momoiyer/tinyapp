@@ -18,21 +18,21 @@ const urlDatabase = {
   },
   i3BoGr: {
     longURL: "https://www.google.ca",
-    userID: "aJ48lW",
+    userID: "bU6Tx2",
   },
 };
 
 
 const users = {
-  userRandomID: {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur",
+  aJ48lW: {
+    id: "aJ48lW",
+    email: "test@mail.com",
+    password: "test",
   },
-  user2RandomID: {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk",
+  bU6Tx2: {
+    id: "bU6Tx2",
+    email: "test2@mail.com",
+    password: "test",
   },
 };
 
@@ -58,10 +58,18 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  const userId = req.cookies["user_id"];
+  if (!userId) {
+    const templateVars = createErrorObj(
+      401,
+      "Please login first to see your shortened URLs",
+      users[req.cookies["user_id"]]);
 
+    return res.render("urls_errorPage", templateVars);
+  }
   const templateVars = {
-    user: users[req.cookies["user_id"]],
-    urls: urlDatabase
+    user: users[userId],
+    urls: urlsForUser(userId)
   };
   res.render("urls_index", templateVars);
 });
@@ -78,14 +86,41 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  const id = req.params.id;
-  const longURL = urlDatabase[id].longURL;
-  if (!longURL) {
-    return res.status(404).send("Requested URL doesn't exists!");
+
+  const userId = req.cookies["user_id"];
+  if (!userId) {
+    const templateVars = createErrorObj(
+      401,
+      "Please login first to see your shortened URLs",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
   }
+
+  const id = req.params.id;
+  const urlInfo = urlDatabase[id];
+  if (!urlInfo) {
+    const templateVars = createErrorObj(
+      404,
+      "Requested URL doesn't exists!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
+  }
+
+  if (urlInfo.userID !== userId) {
+    const templateVars = createErrorObj(
+      401,
+      "You are not authorized to view this URL!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
+  }
+
+  const longURL = urlInfo.longURL;
   const currentUserID = req.cookies["user_id"];
   const templateVars = {
-    user: users[req.cookies["user_id"]],
+    user: users[currentUserID],
     longURL,
     id
   };
@@ -133,7 +168,37 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
+
+  const userId = req.cookies["user_id"];
+  if (!userId) {
+    const templateVars = createErrorObj(
+      401,
+      "Please login first to delete your shortened URLs",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
+  }
+
   const id = req.params.id;
+  const urlInfo = urlDatabase[id];
+  if (!urlInfo) {
+    const templateVars = createErrorObj(
+      404,
+      "Requested URL doesn't exists!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
+  }
+
+  if (urlInfo.userID !== userId) {
+    const templateVars = createErrorObj(
+      401,
+      "You are not authorized to delete this URL!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
+  }
+
   delete urlDatabase[id];
   return res.redirect("/urls");
 });
@@ -152,11 +217,23 @@ app.post("/login", (req, res) => {
 
   const user = getUserByEmail(email);
   if (!email || !password) {
-    return res.status(400).send("Email and password cannot be empty!");
+    // return res.status(400).send("Email and password cannot be empty!");
+    const templateVars = createErrorObj(
+      400,
+      "Email and password cannot be empty!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
   }
 
   if (!user || user.password !== password) {
-    return res.status(403).end("Enter valid email and password!");
+    // return res.status(403).end("Enter valid email and password!");
+    const templateVars = createErrorObj(
+      403,
+      "Enter valid email and password!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
   }
   res.cookie('user_id', user.id);
   res.redirect('/urls');
@@ -171,15 +248,29 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   if (!email || !password) {
-    return res.status(400).send("Email and password cannot be empty!");
+    // return res.status(400).send("Email and password cannot be empty!");
+    const templateVars = createErrorObj(
+      400,
+      "Email and password cannot be empty!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
   }
 
   if (getUserByEmail(email)) {
-    return res.status(400).send("Email already registered!");
+    // return res.status(400).send("Email already registered!");
+    const templateVars = createErrorObj(
+      400,
+      "Email already registered!",
+      users[req.cookies["user_id"]]);
+
+    return res.render("urls_errorPage", templateVars);
   }
+
 
   const userRandomID = generateRandomString();
   users[userRandomID] = { id: userRandomID, email, password };
+  console.log("users: ", users);
   res.cookie('user_id', userRandomID);
   res.redirect('/urls');
 });
@@ -195,6 +286,7 @@ app.listen(PORT, () => {
 //--------------//
 //HELPER FUNCTIONS
 
+//generate 6 char long string for unique userID
 function generateRandomString() {
   // const randomString = Math.random().toString(36);
   // return randomString.slice(randomString.length - 6);
@@ -225,5 +317,23 @@ function getUserByEmail(email) {
     }
   });
   return Object.keys(result).length > 0 ? result : null;
+}
 
+function createErrorObj(code, message, user) {
+  const errorObj = {
+    user: user,
+    errorCode: code,
+    errorMessage: message
+  };
+  return errorObj;
+}
+
+function urlsForUser(user) {
+  let result = {};
+  for (const url in urlDatabase) {
+    if (urlDatabase[url].userID === user) {
+      result[url] = urlDatabase[url].longURL;
+    }
+  }
+  return result;
 }
