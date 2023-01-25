@@ -6,10 +6,17 @@ const PORT = 8080;
 // set the view engine to ejs
 app.set('view engine', 'ejs');
 
+//--------------//
+//TEMPORARY DATABASE SYSTEM
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+const users = {
+};
+
 
 
 //--------------//
@@ -31,22 +38,15 @@ app.get("/u/:id", (req, res) => {
 
 app.get("/urls", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    user: users[req.cookies["user_id"]],
     urls: urlDatabase
   };
   res.render("urls_index", templateVars);
 });
 
-app.post("/urls", (req, res) => {
-  const shortURL = generateRandomString();
-  let longURL = req.body.longURL;
-  urlDatabase[shortURL] = appendHttp(longURL);
-  res.redirect(`/urls/${shortURL}`);
-});
-
 app.get("/urls/new", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"]
+    user: users[req.cookies["user_id"]],
   };
   res.render("urls_new", templateVars);
 });
@@ -57,8 +57,9 @@ app.get("/urls/:id", (req, res) => {
   if (!longURL) {
     return res.redirect("/urls");
   }
+  const currentUserID = req.cookies["user_id"];
   const templateVars = {
-    username: req.cookies["username"],
+    user: users[req.cookies["user_id"]],
     longURL,
     id
   };
@@ -67,7 +68,7 @@ app.get("/urls/:id", (req, res) => {
 
 app.get("/register", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"]
+    user: users[req.cookies["user_id"]],
   };
   res.render("urls_registration", templateVars);
 });
@@ -75,6 +76,13 @@ app.get("/register", (req, res) => {
 
 //--------------//
 //HTTP POST METHODS
+
+app.post("/urls", (req, res) => {
+  const shortURL = generateRandomString();
+  let longURL = req.body.longURL;
+  urlDatabase[shortURL] = appendHttp(longURL);
+  res.redirect(`/urls/${shortURL}`);
+});
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
@@ -104,6 +112,18 @@ app.post("/logout", (req, res) => {
   res.redirect('/urls');
 });
 
+app.post("/register", (req, res) => {
+  const userRandomID = generateRandomString();
+  const email = req.body.email;
+  const password = req.body.password;
+
+  users[userRandomID] = { id: userRandomID, email, password };
+  res.cookie('user_id', userRandomID);
+  res.redirect('/urls');
+});
+
+
+
 //--------------//
 //HELPER FUNCTIONS
 
@@ -127,3 +147,4 @@ function appendHttp(url) {
   }
   return result;
 }
+
