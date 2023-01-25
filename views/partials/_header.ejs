@@ -16,8 +16,15 @@
       <div class="navbar-nav">
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
+        <a class="nav-item nav-link" href="/register">Register New User</a>
+        <% if(user){ %>          
+            <a class="nav-item nav-link" href="/logout">Logout</a>
+          <% }else{ %>
+                <a class="nav-item nav-link" href="/login">Login</a>
+            <%}
+          %>
       </div>
-      <div>   
+      <!-- <div>   
         <% if(user){ %>
           <form method="POST" action="/logout">
             Logged in as : <%= user.email; %>
@@ -31,7 +38,7 @@
             </form>
             <%}
           %>
-      </div>
+      </div> -->
     </div>
   </nav>
 </header>
