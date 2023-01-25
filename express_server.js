@@ -27,10 +27,7 @@ app.get("/urls", (req, res) => {
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   let longURL = req.body.longURL;
-  if (!longURL.startsWith("http")) {
-    longURL = 'https://' + longURL;
-  }
-  urlDatabase[shortURL] = longURL;
+  urlDatabase[shortURL] = appendHttp(longURL);
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -54,6 +51,14 @@ app.post("/urls/:id/delete", (req, res) => {
   return res.redirect("/urls");
 });
 
+app.post("/urls/:id/update", (req, res) => {
+  const id = req.params.id;
+  console.log("body:", req.body);
+  const newURL = req.body.newURL;
+  urlDatabase[id] = appendHttp(newURL);
+  return res.redirect("/urls");
+});
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`);
 });
@@ -66,6 +71,15 @@ function generateRandomString() {
   let result = '';
   for (let i = 0; i < 6; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
+//helper method to append http in url
+function appendHttp(url) {
+  let result = url;
+  if (!url.startsWith("http")) {
+    result = 'http://' + url;
   }
   return result;
 }
