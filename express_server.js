@@ -59,6 +59,12 @@ app.post("/urls/:id/update", (req, res) => {
   return res.redirect("/urls");
 });
 
+app.post("/login", (req, res) => {
+  const username = req.body.username;
+  res.cookie('username', username);
+  res.redirect('/urls');
+});
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`);
 });
