@@ -3,9 +3,6 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 
-// set the view engine to ejs
-app.set('view engine', 'ejs');
-
 //--------------//
 //TEMPORARY DATABASE SYSTEM
 
@@ -27,7 +24,8 @@ const users = {
   },
 };
 
-
+// set the view engine to ejs
+app.set('view engine', 'ejs');
 
 //--------------//
 //MIDDLEWARE CALLS
@@ -41,6 +39,7 @@ app.use(cookieParser());
 
 //--------------//
 //HTTP GET METHODS
+
 app.get("/u/:id", (req, res) => {
   const longURL = `/urls/${req.params.id}`;
   res.redirect(longURL);
@@ -55,6 +54,10 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
+  const userId = req.cookies["user_id"];
+  if (!userId) {
+    return res.redirect("/login");
+  }
   const templateVars = {
     user: users[req.cookies["user_id"]],
   };
@@ -65,7 +68,7 @@ app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   const longURL = urlDatabase[id];
   if (!longURL) {
-    return res.redirect("/urls");
+    return res.status(404).send("Requested URL doesn't exists!");
   }
   const currentUserID = req.cookies["user_id"];
   const templateVars = {
@@ -77,15 +80,25 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
+  const userId = req.cookies["user_id"];
+  if (userId) {
+    return res.redirect("/urls");
+  }
+
   const templateVars = {
-    user: users[req.cookies["user_id"]],
+    user: users[userId],
   };
   res.render("urls_registration", templateVars);
 });
 
 app.get("/login", (req, res) => {
+  const userId = req.cookies["user_id"];
+  if (userId) {
+    return res.redirect("/urls");
+  }
+
   const templateVars = {
-    user: users[req.cookies["user_id"]],
+    user: users[userId],
   };
   res.render("urls_login", templateVars);
 });
@@ -95,6 +108,10 @@ app.get("/login", (req, res) => {
 //HTTP POST METHODS
 
 app.post("/urls", (req, res) => {
+  const userId = req.cookies["user_id"];
+  if (!userId) {
+    return res.status(401).send("Only registered users are allowed to shorten the URL");
+  }
   const shortURL = generateRandomString();
   let longURL = req.body.longURL;
   urlDatabase[shortURL] = appendHttp(longURL);
@@ -114,21 +131,17 @@ app.post("/urls/:id/update", (req, res) => {
   return res.redirect("/urls");
 });
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}`);
-});
-
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
   const user = getUserByEmail(email);
   if (!email || !password) {
-    return res.status(400).end();
+    return res.status(400).send("Email and password cannot be empty!");
   }
 
   if (!user || user.password !== password) {
-    return res.status(403).end();
+    return res.status(403).end("Enter valid email and password!");
   }
   res.cookie('user_id', user.id);
   res.redirect('/urls');
@@ -142,8 +155,12 @@ app.post("/logout", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  if (!email || !password || getUserByEmail(email)) {
-    return res.status(400).end();
+  if (!email || !password) {
+    return res.status(400).send("Email and password cannot be empty!");
+  }
+
+  if (getUserByEmail(email)) {
+    return res.status(400).send("Email already registered!");
   }
 
   const userRandomID = generateRandomString();
@@ -152,6 +169,12 @@ app.post("/register", (req, res) => {
   res.redirect('/urls');
 });
 
+
+//--------------//
+
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}`);
+});
 
 
 //--------------//
