@@ -15,6 +15,16 @@ const urlDatabase = {
 };
 
 const users = {
+  userRandomID: {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur",
+  },
+  user2RandomID: {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk",
+  },
 };
 
 
@@ -113,10 +123,13 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-  const userRandomID = generateRandomString();
   const email = req.body.email;
   const password = req.body.password;
+  if (!email || !password || getUserByEmail(email)) {
+    return res.status(400).end();
+  }
 
+  const userRandomID = generateRandomString();
   users[userRandomID] = { id: userRandomID, email, password };
   res.cookie('user_id', userRandomID);
   res.redirect('/urls');
@@ -148,3 +161,14 @@ function appendHttp(url) {
   return result;
 }
 
+function getUserByEmail(email) {
+  let result = {};
+  const userValues = Object.values(users);
+  userValues.forEach(user => {
+    if (user.email === email) {
+      result = user;
+    }
+  });
+  return Object.keys(result).length > 0 ? result : null;
+
+}
