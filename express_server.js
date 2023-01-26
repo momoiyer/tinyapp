@@ -1,18 +1,16 @@
 const cookieSession = require("cookie-session");
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const { getUserByEmail } = require("./helpers");
 
 const app = express();
 const PORT = 8080;
+app.set('view engine', 'ejs');
 
 //--------------//
 //TEMPORARY DATABASE SYSTEM
 
-// const urlDatabase = {
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com"
-// };
-
+//shortened URL storage
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
@@ -24,6 +22,7 @@ const urlDatabase = {
   },
 };
 
+//Registered user storage
 const passwordTest = "test";
 const hashedPassword = bcrypt.hashSync(passwordTest, 10);
 
@@ -40,10 +39,9 @@ const users = {
   },
 };
 
+//Empty object for future errors
 let errors = {};
 
-// set the view engine to ejs
-app.set('view engine', 'ejs');
 
 //--------------//
 //MIDDLEWARE CALLS
@@ -215,12 +213,13 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  const user = getUserByEmail(email);
   if (!email || !password) {
     createErrorObj(400, "Email and password cannot be empty!");
     return res.redirect("/error");
   }
 
+
+  const user = getUserByEmail(email, users);
   if (!user || !bcrypt.compareSync(password, user.password)) {
     createErrorObj(403, "Enter valid email and password!");
     return res.redirect("/error");
@@ -244,7 +243,7 @@ app.post("/register", (req, res) => {
     return res.redirect("/error");
   }
 
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email, users)) {
     createErrorObj(400, "Email already registered!");
     return res.redirect("/error");
   }
@@ -280,7 +279,7 @@ function generateRandomString() {
   return result;
 }
 
-//helper function to append http in url
+//append http in url
 function appendHttp(url) {
   let result = url;
   if (!url.startsWith("http")) {
@@ -289,17 +288,7 @@ function appendHttp(url) {
   return result;
 }
 
-function getUserByEmail(email) {
-  let result = {};
-  const userValues = Object.values(users);
-  userValues.forEach(user => {
-    if (user.email === email) {
-      result = user;
-    }
-  });
-  return Object.keys(result).length > 0 ? result : null;
-}
-
+//create error objects to display on error web page
 function createErrorObj(code, message, user = undefined) {
   errors = {
     user: user,
@@ -308,6 +297,7 @@ function createErrorObj(code, message, user = undefined) {
   };
 }
 
+//find the owner of shortend urls
 function urlsForUser(user) {
   let result = {};
   for (const url in urlDatabase) {
