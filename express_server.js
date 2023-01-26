@@ -36,6 +36,8 @@ const users = {
   },
 };
 
+let errors = {};
+
 // set the view engine to ejs
 app.set('view engine', 'ejs');
 
@@ -60,13 +62,10 @@ app.get("/u/:id", (req, res) => {
 app.get("/urls", (req, res) => {
   const userId = req.cookies["user_id"];
   if (!userId) {
-    const templateVars = createErrorObj(
-      401,
-      "Please login first to see your shortened URLs",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(401, "Please login first to see your shortened URLs");
+    return res.redirect("/error");
   }
+
   const templateVars = {
     user: users[userId],
     urls: urlsForUser(userId)
@@ -79,6 +78,7 @@ app.get("/urls/new", (req, res) => {
   if (!userId) {
     return res.redirect("/login");
   }
+
   const templateVars = {
     user: users[req.cookies["user_id"]],
   };
@@ -86,35 +86,22 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-
   const userId = req.cookies["user_id"];
   if (!userId) {
-    const templateVars = createErrorObj(
-      401,
-      "Please login first to see your shortened URLs",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(401, "Please login first to see your shortened URLs");
+    return res.redirect("/error");
   }
 
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
-    const templateVars = createErrorObj(
-      404,
-      "Requested URL doesn't exists!",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(404, "Requested URL doesn't exists!", users[req.cookies["user_id"]]);
+    return res.redirect("/error");
   }
 
   if (urlInfo.userID !== userId) {
-    const templateVars = createErrorObj(
-      401,
-      "You are not authorized to view this URL!",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(401, "You are not authorized to view this URL!", users[req.cookies["user_id"]]);
+    return res.redirect("/error");
   }
 
   const longURL = urlInfo.longURL;
@@ -152,6 +139,10 @@ app.get("/login", (req, res) => {
   res.render("urls_login", templateVars);
 });
 
+app.get("/error", (req, res) => {
+  return res.render("urls_errorPage", errors);
+});
+
 
 //--------------//
 //HTTP POST METHODS
@@ -168,35 +159,22 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-
   const userId = req.cookies["user_id"];
   if (!userId) {
-    const templateVars = createErrorObj(
-      401,
-      "Please login first to delete your shortened URLs",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(401, "Please login first to delete your shortened URLs!");
+    return res.redirect("/error");
   }
 
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
-    const templateVars = createErrorObj(
-      404,
-      "Requested URL doesn't exists!",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(404, "Requested URL doesn't exists!", users[req.cookies["user_id"]]);
+    return res.redirect("/error");
   }
 
   if (urlInfo.userID !== userId) {
-    const templateVars = createErrorObj(
-      401,
-      "You are not authorized to delete this URL!",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(401, "You are not authorized to delete this URL!", users[req.cookies["user_id"]]);
+    return res.redirect("/error");
   }
 
   delete urlDatabase[id];
@@ -205,7 +183,23 @@ app.post("/urls/:id/delete", (req, res) => {
 
 app.post("/urls/:id/update", (req, res) => {
   const userId = req.cookies["user_id"];
+  if (!userId) {
+    createErrorObj(401, "Please login first to update your shortened URLs!");
+    return res.redirect("/error");
+  }
+
   const id = req.params.id;
+  const urlInfo = urlDatabase[id];
+  if (!urlInfo) {
+    createErrorObj(404, "Requested URL doesn't exists!", users[req.cookies["user_id"]]);
+    return res.redirect("/error");
+  }
+
+  if (urlInfo.userID !== userId) {
+    createErrorObj(401, "You are not authorized to update this URL!", users[req.cookies["user_id"]]);
+    return res.redirect("/error");
+  }
+
   const longURL = appendHttp(req.body.newURL);
   urlDatabase[id] = { longURL: longURL, userID: userId };
   return res.redirect("/urls");
@@ -217,24 +211,15 @@ app.post("/login", (req, res) => {
 
   const user = getUserByEmail(email);
   if (!email || !password) {
-    // return res.status(400).send("Email and password cannot be empty!");
-    const templateVars = createErrorObj(
-      400,
-      "Email and password cannot be empty!",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(400, "Email and password cannot be empty!");
+    return res.redirect("/error");
   }
 
   if (!user || user.password !== password) {
-    // return res.status(403).end("Enter valid email and password!");
-    const templateVars = createErrorObj(
-      403,
-      "Enter valid email and password!",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(403, "Enter valid email and password!");
+    return res.redirect("/error");
   }
+
   res.cookie('user_id', user.id);
   res.redirect('/urls');
 });
@@ -247,30 +232,19 @@ app.post("/logout", (req, res) => {
 app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  if (!email || !password) {
-    // return res.status(400).send("Email and password cannot be empty!");
-    const templateVars = createErrorObj(
-      400,
-      "Email and password cannot be empty!",
-      users[req.cookies["user_id"]]);
 
-    return res.render("urls_errorPage", templateVars);
+  if (!email || !password) {
+    createErrorObj(400, "Email and password cannot be empty!");
+    return res.redirect("/error");
   }
 
   if (getUserByEmail(email)) {
-    // return res.status(400).send("Email already registered!");
-    const templateVars = createErrorObj(
-      400,
-      "Email already registered!",
-      users[req.cookies["user_id"]]);
-
-    return res.render("urls_errorPage", templateVars);
+    createErrorObj(400, "Email already registered!");
+    return res.redirect("/error");
   }
-
 
   const userRandomID = generateRandomString();
   users[userRandomID] = { id: userRandomID, email, password };
-  console.log("users: ", users);
   res.cookie('user_id', userRandomID);
   res.redirect('/urls');
 });
@@ -319,13 +293,12 @@ function getUserByEmail(email) {
   return Object.keys(result).length > 0 ? result : null;
 }
 
-function createErrorObj(code, message, user) {
-  const errorObj = {
+function createErrorObj(code, message, user = undefined) {
+  errors = {
     user: user,
     errorCode: code,
     errorMessage: message
   };
-  return errorObj;
 }
 
 function urlsForUser(user) {
