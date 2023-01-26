@@ -1,4 +1,4 @@
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
 const express = require("express");
 const bcrypt = require("bcryptjs");
 
@@ -52,7 +52,10 @@ app.set('view engine', 'ejs');
 //It will then add the data to the req(request) object under the key body
 app.use(express.urlencoded({ extended: true }));
 
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+}));
 
 
 //--------------//
@@ -64,7 +67,7 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (!userId) {
     createErrorObj(401, "Please login first to see your shortened URLs");
     return res.redirect("/error");
@@ -78,19 +81,19 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (!userId) {
     return res.redirect("/login");
   }
 
   const templateVars = {
-    user: users[req.cookies["user_id"]],
+    user: users[userId],
   };
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (!userId) {
     createErrorObj(401, "Please login first to see your shortened URLs");
     return res.redirect("/error");
@@ -99,19 +102,18 @@ app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
-    createErrorObj(404, "Requested URL doesn't exists!", users[req.cookies["user_id"]]);
+    createErrorObj(404, "Requested URL doesn't exists!", users[userId]);
     return res.redirect("/error");
   }
 
   if (urlInfo.userID !== userId) {
-    createErrorObj(401, "You are not authorized to view this URL!", users[req.cookies["user_id"]]);
+    createErrorObj(401, "You are not authorized to view this URL!", users[userId]);
     return res.redirect("/error");
   }
 
   const longURL = urlInfo.longURL;
-  const currentUserID = req.cookies["user_id"];
   const templateVars = {
-    user: users[currentUserID],
+    user: users[userId],
     longURL,
     id
   };
@@ -120,7 +122,7 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (userId) {
     return res.redirect("/urls");
   }
@@ -132,7 +134,7 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (userId) {
     return res.redirect("/urls");
   }
@@ -152,7 +154,7 @@ app.get("/error", (req, res) => {
 //HTTP POST METHODS
 
 app.post("/urls", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (!userId) {
     return res.status(401).send("Only registered users are allowed to shorten the URL");
   }
@@ -163,7 +165,7 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (!userId) {
     createErrorObj(401, "Please login first to delete your shortened URLs!");
     return res.redirect("/error");
@@ -172,12 +174,12 @@ app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
-    createErrorObj(404, "Requested URL doesn't exists!", users[req.cookies["user_id"]]);
+    createErrorObj(404, "Requested URL doesn't exists!", users[userId]);
     return res.redirect("/error");
   }
 
   if (urlInfo.userID !== userId) {
-    createErrorObj(401, "You are not authorized to delete this URL!", users[req.cookies["user_id"]]);
+    createErrorObj(401, "You are not authorized to delete this URL!", users[userId]);
     return res.redirect("/error");
   }
 
@@ -186,7 +188,7 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  const userId = req.cookies["user_id"];
+  const userId = req.session.user_id;
   if (!userId) {
     createErrorObj(401, "Please login first to update your shortened URLs!");
     return res.redirect("/error");
@@ -195,12 +197,12 @@ app.post("/urls/:id/update", (req, res) => {
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
-    createErrorObj(404, "Requested URL doesn't exists!", users[req.cookies["user_id"]]);
+    createErrorObj(404, "Requested URL doesn't exists!", users[userId]);
     return res.redirect("/error");
   }
 
   if (urlInfo.userID !== userId) {
-    createErrorObj(401, "You are not authorized to update this URL!", users[req.cookies["user_id"]]);
+    createErrorObj(401, "You are not authorized to update this URL!", users[userId]);
     return res.redirect("/error");
   }
 
@@ -224,12 +226,12 @@ app.post("/login", (req, res) => {
     return res.redirect("/error");
   }
 
-  res.cookie('user_id', user.id);
+  req.session.user_id = user.id;
   res.redirect('/urls');
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect('/login');
 });
 
@@ -250,7 +252,7 @@ app.post("/register", (req, res) => {
   const hashedPassword = bcrypt.hashSync(password, 10);
   const userRandomID = generateRandomString();
   users[userRandomID] = { id: userRandomID, email, password: hashedPassword };
-  res.cookie('user_id', userRandomID);
+  req.session.user_id = userRandomID;
   res.redirect('/urls');
 });
 
