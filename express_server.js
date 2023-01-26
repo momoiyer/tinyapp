@@ -1,5 +1,7 @@
 const cookieParser = require("cookie-parser");
 const express = require("express");
+const bcrypt = require("bcryptjs");
+
 const app = express();
 const PORT = 8080;
 
@@ -22,17 +24,19 @@ const urlDatabase = {
   },
 };
 
+const passwordTest = "test";
+const hashedPassword = bcrypt.hashSync(passwordTest, 10);
 
 const users = {
   aJ48lW: {
     id: "aJ48lW",
     email: "test@mail.com",
-    password: "test",
+    password: hashedPassword,
   },
   bU6Tx2: {
     id: "bU6Tx2",
     email: "test2@mail.com",
-    password: "test",
+    password: hashedPassword,
   },
 };
 
@@ -215,7 +219,7 @@ app.post("/login", (req, res) => {
     return res.redirect("/error");
   }
 
-  if (!user || user.password !== password) {
+  if (!user || !bcrypt.compareSync(password, user.password)) {
     createErrorObj(403, "Enter valid email and password!");
     return res.redirect("/error");
   }
@@ -243,8 +247,9 @@ app.post("/register", (req, res) => {
     return res.redirect("/error");
   }
 
+  const hashedPassword = bcrypt.hashSync(password, 10);
   const userRandomID = generateRandomString();
-  users[userRandomID] = { id: userRandomID, email, password };
+  users[userRandomID] = { id: userRandomID, email, password: hashedPassword };
   res.cookie('user_id', userRandomID);
   res.redirect('/urls');
 });
