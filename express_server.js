@@ -41,7 +41,7 @@ app.get("/urls", (req, res) => {
   const userId = req.session.user_id;
   if (!userId) {
     errors = createErrorObj(401, "Please login first to see your shortened URLs");
-    return res.redirect("/error");
+    return res.redirect(401, "/error");
   }
 
   const templateVars = {
@@ -67,19 +67,19 @@ app.get("/urls/:id", (req, res) => {
   const userId = req.session.user_id;
   if (!userId) {
     errors = createErrorObj(401, "Please login first to see your shortened URLs");
-    return res.redirect("/error");
+    return res.redirect(401, "/error");
   }
 
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
     errors = createErrorObj(404, "Requested URL doesn't exists!", users[userId]);
-    return res.redirect("/error");
+    return res.redirect(404, "/error");
   }
 
   if (urlInfo.userID !== userId) {
     errors = createErrorObj(401, "You are not authorized to view this URL!", users[userId]);
-    return res.redirect("/error");
+    return res.redirect(401, "/error");
   }
 
   const longURL = urlInfo.longURL;
@@ -129,9 +129,14 @@ app.post("/urls", (req, res) => {
   if (!userId) {
     return res.status(401).send("Only registered users are allowed to shorten the URL");
   }
+  const longURL = req.body.longURL;
+  if (!longURL) {
+    errors = createErrorObj(400, "URL cannot be empty!");
+    return res.redirect(400, "/error");
+  }
   const shortURL = generateRandomString();
-  const longURL = appendHttp(req.body.longURL);
-  urlDatabase[shortURL] = { longURL: longURL, userID: userId };
+
+  urlDatabase[shortURL] = { longURL: appendHttp(longURL), userID: userId };
   res.redirect(`/urls/${shortURL}`);
 });
 
@@ -139,19 +144,19 @@ app.post("/urls/:id/delete", (req, res) => {
   const userId = req.session.user_id;
   if (!userId) {
     errors = createErrorObj(401, "Please login first to delete your shortened URLs!");
-    return res.redirect("/error");
+    return res.redirect(401, "/error");
   }
 
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
     errors = createErrorObj(404, "Requested URL doesn't exists!", users[userId]);
-    return res.redirect("/error");
+    return res.redirect(404, "/error");
   }
 
   if (urlInfo.userID !== userId) {
     errors = createErrorObj(401, "You are not authorized to delete this URL!", users[userId]);
-    return res.redirect("/error");
+    return res.redirect(401, "/error");
   }
 
   delete urlDatabase[id];
@@ -162,19 +167,19 @@ app.post("/urls/:id/update", (req, res) => {
   const userId = req.session.user_id;
   if (!userId) {
     errors = createErrorObj(401, "Please login first to update your shortened URLs!");
-    return res.redirect("/error");
+    return res.redirect(401, "/error");
   }
 
   const id = req.params.id;
   const urlInfo = urlDatabase[id];
   if (!urlInfo) {
     errors = createErrorObj(404, "Requested URL doesn't exists!", users[userId]);
-    return res.redirect("/error");
+    return res.redirect(404, "/error");
   }
 
   if (urlInfo.userID !== userId) {
     errors = createErrorObj(401, "You are not authorized to update this URL!", users[userId]);
-    return res.redirect("/error");
+    return res.redirect(401, "/error");
   }
 
   const longURL = appendHttp(req.body.newURL);
@@ -188,14 +193,14 @@ app.post("/login", (req, res) => {
 
   if (!email || !password) {
     errors = createErrorObj(400, "Email and password cannot be empty!");
-    return res.redirect("/error");
+    return res.redirect(400, "/error");
   }
 
 
   const user = getUserByEmail(email, users);
   if (!user || !bcrypt.compareSync(password, user.password)) {
     errors = createErrorObj(403, "Enter valid email and password!");
-    return res.redirect("/error");
+    return res.redirect(403, "/error");
   }
 
   req.session.user_id = user.id;
@@ -213,12 +218,12 @@ app.post("/register", (req, res) => {
 
   if (!email || !password) {
     errors = createErrorObj(400, "Email and password cannot be empty!");
-    return res.redirect("/error");
+    return res.redirect(400, "/error");
   }
 
   if (getUserByEmail(email, users)) {
     errors = createErrorObj(400, "Email already registered!");
-    return res.redirect("/error");
+    return res.redirect(400, "/error");
   }
 
   const hashedPassword = bcrypt.hashSync(password, 10);
